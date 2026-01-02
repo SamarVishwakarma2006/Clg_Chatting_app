@@ -1,9 +1,16 @@
-import { neonConfig } from "@neondatabase/serverless"
+/**
+ * Database configuration for Firebase Firestore
+ * 
+ * This module exports the Firestore database instance.
+ * The actual initialization is handled in lib/firebase.ts
+ */
 
-// Enable WebSocket for local development
-if (process.env.NODE_ENV === "development") {
-  neonConfig.webSocketConstructor = WebSocket
+import { getDb } from "./firebase"
+
+// Export Firestore database instance
+export { getDb }
+
+// For backward compatibility, export as DATABASE_URL check
+export function isDatabaseConfigured(): boolean {
+  return !!process.env.FIREBASE_SERVICE_ACCOUNT
 }
-
-// Database connection will use DATABASE_URL from environment variables
-export const DATABASE_URL = process.env.DATABASE_URL!

@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
-import { DATABASE_URL } from "@/lib/db"
+import { getDb } from "@/lib/db"
 
 // This endpoint should be called by a cron job (e.g., Vercel Cron)
 // to automatically delete queries older than 7 days
@@ -14,19 +13,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const sql = neon(DATABASE_URL)
+    const db = getDb()
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-    // Delete queries older than 7 days
-    const result = await sql`
-      DELETE FROM queries 
-      WHERE created_at < NOW() - INTERVAL '7 days'
-      RETURNING query_id
-    `
+    // Get all queries older than 7 days
+    const queriesSnapshot = await db.collection("queries")
+      .where("created_at", "<", sevenDaysAgo)
+      .get()
+
+    let deletedCount = 0
+
+    // Delete each query and its comments
+    for (const queryDoc of queriesSnapshot.docs) {
+      const queryId = queryDoc.id
+
+      // Delete all comments for this query
+      const commentsSnapshot = await db.collection("comments")
+        .where("query_id", "==", queryId)
+        .get()
+      
+      const deleteCommentsPromises = commentsSnapshot.docs.map((doc) => doc.ref.delete())
+      await Promise.all(deleteCommentsPromises)
+
+      // Delete the query
+      await queryDoc.ref.delete()
+      deletedCount++
+    }
 
     return NextResponse.json({
       success: true,
-      deletedCount: result.length,
-      message: `Deleted ${result.length} queries older than 7 days`,
+      deletedCount,
+      message: `Deleted ${deletedCount} queries older than 7 days`,
     })
   } catch (error) {
     console.error("[v0] Cleanup error:", error)

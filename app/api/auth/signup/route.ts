@@ -1,8 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
 import { hash } from "bcryptjs"
 import { validateCollegeEmail, signToken } from "@/lib/auth"
-import { DATABASE_URL } from "@/lib/db"
+import { getDb } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,46 +17,55 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 })
     }
 
-    if (!DATABASE_URL) {
-      console.error("[v0] DATABASE_URL is not configured")
-      return NextResponse.json({ error: "Database configuration missing" }, { status: 500 })
+    // Initialize Firestore
+    let db
+    try {
+      db = getDb()
+    } catch (dbError) {
+      console.error("[v0] Firebase initialization error:", dbError)
+      return NextResponse.json({ 
+        error: "Database configuration missing. Please set FIREBASE_SERVICE_ACCOUNT in your .env.local file." 
+      }, { status: 500 })
     }
 
-    const sql = neon(DATABASE_URL)
-
     // Check if user already exists
-    const existingUser = await sql`
-      SELECT id FROM students_auth WHERE email = ${email}
-    `
+    const usersRef = db.collection("students_auth")
+    const existingUserQuery = await usersRef.where("email", "==", email).limit(1).get()
 
-    if (existingUser.length > 0) {
+    if (!existingUserQuery.empty) {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 })
     }
 
     // Hash password
     const hashedPassword = await hash(password, 10)
 
-    // Insert new user
-    const result = await sql`
-      INSERT INTO students_auth (email, hashed_password)
-      VALUES (${email}, ${hashedPassword})
-      RETURNING id, email
-    `
+    // Create new user document
+    // Generate a numeric userId (timestamp-based for uniqueness)
+    const userId = Date.now() % 1000000000 // Use timestamp modulo to get a reasonable number
+    
+    const userData = {
+      email,
+      hashed_password: hashedPassword,
+      user_id: userId, // Store numeric userId for JWT compatibility
+      created_at: new Date(),
+    }
 
-    const user = result[0]
+    const userRef = await usersRef.add(userData)
+    const userDoc = await userRef.get()
+    const userData_result = userDoc.data()
 
     // Generate JWT token
     const token = await signToken({
-      userId: user.id,
-      email: user.email,
+      userId,
+      email: userData_result?.email,
     })
 
     return NextResponse.json({
       success: true,
       token,
       user: {
-        id: user.id,
-        email: user.email,
+        id: userId,
+        email: userData_result?.email,
       },
     })
   } catch (error) {

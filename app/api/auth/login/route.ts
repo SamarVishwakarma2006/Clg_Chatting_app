@@ -1,32 +1,39 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
 import { compare } from "bcryptjs"
 import { signToken } from "@/lib/auth"
-import { DATABASE_URL } from "@/lib/db"
+import { getDb } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
 
-    if (!DATABASE_URL) {
-      console.error("[v0] DATABASE_URL is not configured")
-      return NextResponse.json({ error: "Database configuration missing" }, { status: 500 })
+    // Initialize Firestore
+    let db
+    try {
+      db = getDb()
+    } catch (dbError) {
+      console.error("[v0] Firebase initialization error:", dbError)
+      return NextResponse.json({ 
+        error: "Database configuration missing. Please set FIREBASE_SERVICE_ACCOUNT in your .env.local file." 
+      }, { status: 500 })
     }
 
-    const sql = neon(DATABASE_URL)
-
     // Get user from database
-    const users = await sql`
-      SELECT id, email, hashed_password 
-      FROM students_auth 
-      WHERE email = ${email}
-    `
+    const usersRef = db.collection("students_auth")
+    const userQuery = await usersRef.where("email", "==", email).limit(1).get()
 
-    if (users.length === 0) {
+    if (userQuery.empty) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
-    const user = users[0]
+    const userDoc = userQuery.docs[0]
+    const userData = userDoc.data()
+    const user = {
+      id: userDoc.id,
+      email: userData.email,
+      hashed_password: userData.hashed_password,
+      user_id: userData.user_id, // Get numeric userId from document
+    }
 
     // Verify password
     const isValid = await compare(password, user.hashed_password)
@@ -37,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Generate JWT token
     const token = await signToken({
-      userId: user.id,
+      userId: user.user_id || 0,
       email: user.email,
     })
 
@@ -45,7 +52,7 @@ export async function POST(request: NextRequest) {
       success: true,
       token,
       user: {
-        id: user.id,
+        id: user.user_id || 0,
         email: user.email,
       },
     })
