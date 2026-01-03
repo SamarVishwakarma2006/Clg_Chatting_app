@@ -3,6 +3,15 @@
 # dependencies
 /node_modules
 
+# pnpm
+.pnpm-store/
+pnpm-store/
+# lockfiles (ignore npm lock if you use pnpm)
+package-lock.json
+
+# pnpm lock (keep this if you use pnpm)
+# pnpm-lock.yaml
+
 # next.js
 /.next/
 /out/
@@ -17,7 +26,9 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files
-.env*
+.env
+.env.*.local
+.env.local
 
 # Firebase service account (contains sensitive credentials)
 firebase-service-account.json
@@ -30,3 +41,16 @@ firebase-service-account.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# OS / editors / IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# tests / coverage
+coverage/
+
+# misc / project-specific noisy files
+ssh -T git@github.com
+ssh -T git@github.com.pub
