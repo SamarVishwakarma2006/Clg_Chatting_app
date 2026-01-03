@@ -9,18 +9,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, MessageCircle, Trash2, Send } from "lucide-react"
 
 interface Query {
-  query_id: number
+  query_id: string
   section: string
   title: string
   description: string
   anonymous_name: string
   created_at: string
-  student_id: number
+  student_id: string
   is_owner: boolean
 }
 
 interface Comment {
-  comment_id: number
+  comment_id: string
   comment_text: string
   anonymous_name: string
   created_at: string
@@ -63,7 +63,18 @@ export default function QueryDetailPage() {
           router.push("/auth/login")
           return
         }
-        throw new Error("Failed to load query")
+        
+        // Try to get error message from response
+        let errorMessage = "Failed to load query"
+        try {
+          const errorData = await res.json()
+          errorMessage = errorData.error || errorMessage
+          console.error("[v0] API Error:", errorData)
+        } catch (e) {
+          console.error("[v0] Failed to parse error response:", e)
+        }
+        
+        throw new Error(errorMessage)
       }
 
       const data = await res.json()
@@ -98,7 +109,7 @@ export default function QueryDetailPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          query_id: Number.parseInt(queryId),
+          query_id: queryId, // Firestore document IDs are strings
           comment_text: newComment,
         }),
       })

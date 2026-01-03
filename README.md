@@ -69,14 +69,20 @@ CRON_SECRET=your_cron_secret (optional)
 
 ## 📦 Setup Instructions
 
+**📖 For detailed Firestore setup instructions, see [FIRESTORE_SETUP.md](./FIRESTORE_SETUP.md)**
+
+Quick setup:
+
 1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
 2. Enable Firestore Database in your Firebase project
 3. Generate a service account key:
    - Go to Project Settings > Service Accounts
    - Click "Generate New Private Key"
    - Copy the JSON content and set it as `FIREBASE_SERVICE_ACCOUNT` in your `.env.local` file (as a single-line string)
-4. Set up environment variables in `.env.local`
-5. Deploy to Vercel (cron job will auto-run daily)
+4. Set up environment variables in `.env.local` (see `env.example`)
+5. Verify your setup: `npm run verify-firebase`
+6. Start development: `npm run dev`
+7. Deploy to Vercel (cron job will auto-run daily)
 
 ## 🛡 Security Features
 
@@ -87,3 +93,19 @@ CRON_SECRET=your_cron_secret (optional)
 - Owner-only query deletion
 - Firestore security rules (configure in Firebase Console)
 - Anonymous identity on all public-facing data
+
+## 🚀 Deployment
+
+**📖 For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)**
+
+Quick deployment to Vercel:
+
+1. Push your code to GitHub/GitLab/Bitbucket
+2. Import project on [vercel.com](https://vercel.com)
+3. Add environment variables in Vercel dashboard:
+   - `FIREBASE_SERVICE_ACCOUNT` (your Firebase service account JSON)
+   - `JWT_SECRET` (your JWT secret)
+   - `GOOGLE_PERSPECTIVE_API_KEY` (optional)
+4. Deploy!
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete instructions and alternative deployment options.

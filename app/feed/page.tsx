@@ -10,7 +10,7 @@ import { MessageCircle, Plus, LogOut } from "lucide-react"
 const SECTIONS = ["All", "Academics", "Campus Life", "Events", "Career", "General"]
 
 interface Query {
-  query_id: number
+  query_id: string
   section: string
   title: string
   description: string
